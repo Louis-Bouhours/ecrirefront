@@ -1,20 +1,19 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
+import { StrictMode } from 'react';
+import ReactDOM from 'react-dom/client';
+import { RouterProvider, createRouter } from '@tanstack/react-router';
+import { routeTree } from './routes/routeTree.tsx';
+import './index.css';
 
-// Version temporaire en attendant que les routes se génèrent
-// eslint-disable-next-line react-refresh/only-export-components
-function App() {
-  return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold">Ecrirefront</h1>
-      <p>Configuration des routes en cours...</p>
-    </div>
-  )
+// Crée le routeur avec la configuration
+const router = createRouter({ routeTree });
+
+// Render the app
+const rootElement = document.getElementById('root')!;
+if (!rootElement.innerHTML) {
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(
+    <StrictMode>
+      <RouterProvider router={router} />
+    </StrictMode>,
+  );
 }
-
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)

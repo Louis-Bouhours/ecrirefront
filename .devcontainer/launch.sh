@@ -68,8 +68,8 @@ fi
 
 # === ENV VARIABLES ===
 custom_echo "Setting up environment variables..."
-VITE_API_BASE_URL=http://host.docker.internal:8081
-VITE_SOCKET_URL=http://host.docker.internal:8081
+export VITE_API_BASE_URL="http://localhost:8081"
+export VITE_SOCKET_URL="http://localhost:8081"
 
 
 # === TIMEZONE SETUP ===

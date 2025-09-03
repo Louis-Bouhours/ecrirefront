@@ -1,5 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-import { API_CONFIG } from '@/config/api';
+import { API_CONFIG } from '../src/config/api';
 
 export interface Message {
   username: string;
