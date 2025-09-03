@@ -4,12 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0 --port 3000",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-router": "^1.131.32",
+    "@tanstack/router-plugin": "^1.131.32",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },

@@ -32,17 +32,23 @@ function custom_echo {
     ERROR) color="\033[31m" ;; # rouge
   esac
 
-  echo -e "${gray}[${reset}${cyan}${timestamp}${reset}${gray}] [${reset}${green}Romain${reset} ${blue}GUILLEMOT${reset} ${purple}OZLALOC ${cyan}V2${reset}${gray}] ${color}${level}${reset} $1"
+  echo -e "${gray}[${reset}${cyan}${timestamp}${reset}${gray}] [${reset}${green}LOUIS${reset} ${blue}BOUHOURS${reset} ${purple}ecrirefront ${reset}${gray}] ${color}${level}${reset} $1"
 }
 
-# === ASCII BANNER ===
-echo -e "${green}▄▄▄        • ▌ ▄ ·.  ▄▄▄· ▪   ▐ ▄    ${blue}  ▄▄ • ▄• ▄▌▪  ▄▄▌  ▄▄▌  ▄▄▄ .• ▌ ▄ ·.       ▄▄▄▄▄"
-echo -e "${green}▀▄ █·▪     ·██ ▐███▪▐█ ▀█ ██ •█▌▐█  ${blue}  ▐█ ▀ ▪█▪██▌██ ██•  ██•  ▀▄.▀··██ ▐███▪▪     •██  "
-echo -e "${green}▐▀▀▄  ▄█▀▄ ▐█ ▌▐▌▐█·▄█▀▀█ ▐█·▐█▐▐▌  ${blue}  ▄█ ▀█▄█▌▐█▌▐█·██▪  ██▪  ▐▀▀▪▄▐█ ▌▐▌▐█· ▄█▀▄  ▐█.▪"
-echo -e "${green}▐█•█▌▐█▌.▐▌██ ██▌▐█▌▐█ ▪▐▌▐█▌██▐█▌  ${blue}  ▐█▄▪▐█▐█▄█▌▐█▌▐█▌▐▌▐█▌▐▌▐█▄▄▌██ ██▌▐█▌▐█▌.▐▌ ▐█▌·"
-echo -e "${green}.▀  ▀ ▀█▄▀▪▀▀  █▪▀▀▀ ▀  ▀ ▀▀▀▀▀ █▪  ${blue}  ·▀▀▀▀  ▀▀▀ ▀▀▀.▀▀▀ .▀▀▀  ▀▀▀ ▀▀  █▪▀▀▀ ▀█▄▀▪ ▀▀▀ "
-echo -e "${purple}                                 Ozlaloc V2                                   "
-custom_echo "Launching Ozlaloc V2 Startup Script..."
+#!/bin/bash
+
+# === NOUVEAU ASCII BANNER ===
+echo -e "\033[1;36m"  # Couleur cyan pour le nouveau banner
+echo "▗▖ ▄▄▄  █  ▐▌▄  ▄▄▄     ▗▄▄▖  ▄▄▄  █  ▐▌▐▌    ▄▄▄  █  ▐▌ ▄▄▄ ▄▄▄ "
+echo "▐▌█   █ ▀▄▄▞▘▄ ▀▄▄      ▐▌ ▐▌█   █ ▀▄▄▞▘▐▌   █   █ ▀▄▄▞▘█   ▀▄▄   "
+echo "▐▌▀▄▄▄▀      █ ▄▄▄▀     ▐▛▀▚▖▀▄▄▄▀      ▐▛▀▚▖▀▄▄▄▀      █   ▄▄▄▀  "
+echo "▐▙▄▄▖        █          ▐▙▄▞▘           ▐▌ ▐▌                     "
+echo -e "\033[0m"     # Réinitialise la couleur
+echo -e "\033[1;35m"  # Couleur purple pour la signature
+echo "Ecrirefront"
+echo -e "\033[0m"     # Réinitialise la couleur
+custom_echo "Launching Ecrirefront Startup Script..."
+
 
 # === GIT CONFIG ===
 custom_echo "Checking Git configuration..."

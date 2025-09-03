@@ -1,25 +1,42 @@
 import { useState, useEffect } from 'react';
-import { authService } from '../../services/authService.ts';
-import type { LoginRequest, RegisterRequest } from '@/config/api.ts';
+import { authService } from '../../services/authService';
+
+interface LoginCredentials {
+  email: string;     // ← Garde email pour correspondre à votre AuthForm
+  password: string;
+}
+
+interface RegisterData {
+  username: string;
+  email: string;     // ← Garde email pour correspondre à votre AuthForm
+  password: string;
+}
 
 export const useAuth = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(authService.isAuthenticated());
-  const [username, setUsername] = useState(authService.getUsername());
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setIsAuthenticated(authService.isAuthenticated());
-    setUsername(authService.getUsername());
+    const checkAuth = () => {
+      const isAuth = authService.isAuthenticated();
+      const user = authService.getUsername();
+      setIsAuthenticated(isAuth);
+      setUsername(user);
+    };
+
+    checkAuth();
   }, []);
 
-  const login = async (credentials: LoginRequest) => {
+  const login = async (credentials: LoginCredentials) => {
     setLoading(true);
     setError(null);
+
     try {
-      await authService.login(credentials);
+      const response = await authService.login(credentials);
       setIsAuthenticated(true);
-      setUsername(authService.getUsername());
+      setUsername(response.username);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de connexion');
     } finally {
@@ -27,13 +44,14 @@ export const useAuth = () => {
     }
   };
 
-  const register = async (userData: RegisterRequest) => {
+  const register = async (userData: RegisterData) => {
     setLoading(true);
     setError(null);
+
     try {
-      await authService.register(userData);
+      const response = await authService.register(userData);
       setIsAuthenticated(true);
-      setUsername(authService.getUsername());
+      setUsername(response.username);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur d\'inscription');
     } finally {

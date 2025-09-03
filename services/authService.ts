@@ -1,49 +1,64 @@
-import { API_CONFIG } from '@/config/api.ts';
-import type { LoginRequest, RegisterRequest, AuthResponse, ChatTokenRequest } from '@/config/api.ts';
+import { API_CONFIG } from '../src/config/api';
+import type { LoginRequest, RegisterRequest, AuthResponse, ChatTokenRequest } from '../src/config/api';
 
 class AuthService {
   private token: string | null = null;
   private username: string | null = null;
 
   constructor() {
-    // Récupérer le token du localStorage au démarrage
-    this.token = localStorage.getItem('token');
+    this.token = localStorage.getItem('access_token');
     this.username = localStorage.getItem('username');
   }
 
   async login(credentials: LoginRequest): Promise<AuthResponse> {
+    // Convertir email en username pour votre backend
+    const backendCredentials = {
+      username: credentials.email, // ← Votre backend attend username, mais votre form envoie email
+      password: credentials.password,
+    };
+
     const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.LOGIN}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(credentials),
+      credentials: 'include',
+      body: JSON.stringify(backendCredentials),
     });
 
     if (!response.ok) {
-      throw new Error('Échec de la connexion');
+      const error = await response.json();
+      throw new Error(error.error || 'Échec de la connexion');
     }
 
     const data: AuthResponse = await response.json();
-    this.setAuthData(data.token, data.username);
+    this.setAuthData(data.username);
     return data;
   }
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
+    // Adapter pour votre backend - utiliser email comme username
+    const backendUserData = {
+      username: userData.email, // ← Utiliser email comme username
+      password: userData.password,
+      avatar: userData.username, // ← Utiliser le username du form comme avatar/display name
+    };
+
     const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.REGISTER}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(userData),
+      body: JSON.stringify(backendUserData),
     });
 
     if (!response.ok) {
-      throw new Error('Échec de l\'inscription');
+      const error = await response.json();
+      throw new Error(error.error || 'Échec de l\'inscription');
     }
 
     const data: AuthResponse = await response.json();
-    this.setAuthData(data.token, data.username);
+    this.setAuthData(data.username);
     return data;
   }
 
@@ -57,7 +72,8 @@ class AuthService {
     });
 
     if (!response.ok) {
-      throw new Error('Échec de l\'obtention du token de chat');
+      const error = await response.json();
+      throw new Error(error.error || 'Échec de l\'obtention du token de chat');
     }
 
     const data = await response.json();
@@ -67,14 +83,17 @@ class AuthService {
   logout(): void {
     this.token = null;
     this.username = null;
-    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
     localStorage.removeItem('username');
+
+    fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.LOGOUT}`, {
+      method: 'POST',
+      credentials: 'include',
+    }).catch(() => {});
   }
 
-  private setAuthData(token: string, username: string): void {
-    this.token = token;
+  private setAuthData(username: string): void {
     this.username = username;
-    localStorage.setItem('token', token);
     localStorage.setItem('username', username);
   }
 
@@ -87,7 +106,7 @@ class AuthService {
   }
 
   isAuthenticated(): boolean {
-    return this.token !== null;
+    return this.username !== null;
   }
 }
 
