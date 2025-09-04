@@ -34,7 +34,8 @@ export const AuthForm: React.FC = () => {
       }
       navigate({ to: '/general-chat' });
     } catch (err) {
-      return alert(err);
+      // L'erreur est déjà gérée par le hook useAuth et affichée dans le composant
+      console.error('Erreur d\'authentification:', err);
     }
   };
 

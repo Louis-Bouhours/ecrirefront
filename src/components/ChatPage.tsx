@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { authService } from '../../services/authService.ts';
 
 interface Message {
   id: string;
@@ -87,15 +88,17 @@ const ChatPage: React.FC = () => {
     setShowScrollButton(!atBottom && messages.length > 5);
   };
 
-  // Récupère le username (localStorage -> /api/me -> redirection)
+  // Récupère le username depuis le JWT
   useEffect(() => {
-    const fromLocal = localStorage.getItem('username');
-    if (fromLocal) {
-      setUsername(fromLocal);
+    // Utiliser le username du JWT via le service d'authentification
+    const usernameFromJWT = authService.getUsername();
+
+    if (usernameFromJWT) {
+      setUsername(usernameFromJWT);
       return;
     }
 
-    // si pas de localStorage, tente depuis le token via /api/me
+    // Si pas de username dans le JWT, tenter de récupérer via /api/me
     fetch('/api/me', { credentials: 'include' })
       .then(async (res) => {
         if (!res.ok) throw new Error('unauthorized');
@@ -104,11 +107,6 @@ const ChatPage: React.FC = () => {
       .then((data) => {
         if (data?.username) {
           setUsername(data.username);
-          try {
-            localStorage.setItem('username', data.username);
-          } catch (err) {
-            console.debug('localStorage.setItem failed (ignored):', err);
-          }
         } else {
           throw new Error('no username');
         }
@@ -310,11 +308,7 @@ const ChatPage: React.FC = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => {
-                try {
-                  localStorage.removeItem('username');
-                } catch (err) {
-                  console.debug('localStorage.removeItem failed (ignored):', err);
-                }
+                authService.logout();
                 window.location.href = '/login';
               }}
               className="py-2 px-4 rounded-lg bg-white border border-slate-200 text-slate-700 font-medium shadow-sm hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"

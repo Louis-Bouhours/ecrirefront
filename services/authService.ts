@@ -1,19 +1,48 @@
 import { API_CONFIG } from '../src/config/api';
 import type { LoginRequest, RegisterRequest, AuthResponse, ChatTokenRequest } from '../src/config/api';
+import { jwtDecode } from "/IdeaProjects/ecrirefront/node_modules/jwt-decode/build/esm/index"
+
+
+interface JwtPayload {
+  user_id: string;
+  username: string;
+  token_type: string;
+  exp: number;
+}
 
 class AuthService {
-  private token: string | null = null;
-  private username: string | null = null;
-
   constructor() {
-    this.token = localStorage.getItem('access_token');
-    this.username = localStorage.getItem('username');
+    // Ne plus initialiser depuis localStorage
+  }
+
+  // Récupérer le token JWT depuis les cookies
+  private getAccessToken(): string | null {
+    const cookies = document.cookie.split(';');
+    for (const cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === 'access_token') {
+        return value;
+      }
+    }
+    return null;
+  }
+
+  // Fonction pour décoder le JWT
+  private decodeToken(): JwtPayload | null {
+    try {
+      const token = this.getAccessToken();
+      if (!token) return null;
+
+      return jwtDecode<JwtPayload>(token);
+    } catch (error) {
+      console.error('Erreur lors du décodage du token:', error);
+      return null;
+    }
   }
 
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    // Convertir email en username pour votre backend
     const backendCredentials = {
-      username: credentials.email, // ← Votre backend attend username, mais votre form envoie email
+      identifier: credentials.email, // Utiliser identifier au lieu de username
       password: credentials.password,
     };
 
@@ -22,26 +51,24 @@ class AuthService {
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'include',
+      credentials: 'include', // Important pour recevoir les cookies
       body: JSON.stringify(backendCredentials),
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Échec de la connexion');
+      throw new Error(error.error || 'Identifiants incorrects');
     }
 
     const data: AuthResponse = await response.json();
-    this.setAuthData(data.username);
     return data;
   }
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
-    // Adapter pour votre backend - utiliser email comme username
     const backendUserData = {
-      username: userData.email, // ← Utiliser email comme username
+      username: userData.username,
+      email: userData.email,
       password: userData.password,
-      avatar: userData.username, // ← Utiliser le username du form comme avatar/display name
     };
 
     const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.REGISTER}`, {
@@ -49,6 +76,7 @@ class AuthService {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include', // Important pour recevoir les cookies
       body: JSON.stringify(backendUserData),
     });
 
@@ -58,7 +86,6 @@ class AuthService {
     }
 
     const data: AuthResponse = await response.json();
-    this.setAuthData(data.username);
     return data;
   }
 
@@ -68,6 +95,7 @@ class AuthService {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({ username } as ChatTokenRequest),
     });
 
@@ -81,32 +109,31 @@ class AuthService {
   }
 
   logout(): void {
-    this.token = null;
-    this.username = null;
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('username');
-
     fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.LOGOUT}`, {
       method: 'POST',
       credentials: 'include',
     }).catch(() => {});
   }
 
-  private setAuthData(username: string): void {
-    this.username = username;
-    localStorage.setItem('username', username);
-  }
-
-  getToken(): string | null {
-    return this.token;
-  }
-
   getUsername(): string | null {
-    return this.username;
+    // Récupérer depuis le JWT au lieu du localStorage
+    const decoded = this.decodeToken();
+    return decoded?.username || null;
+  }
+
+  getUserId(): string | null {
+    // Récupérer l'ID utilisateur depuis le JWT
+    const decoded = this.decodeToken();
+    return decoded?.user_id || null;
   }
 
   isAuthenticated(): boolean {
-    return this.username !== null;
+    // Vérifier si le JWT est valide et non expiré
+    const decoded = this.decodeToken();
+    if (!decoded) return false;
+
+    // Vérifier si le token n'est pas expiré (timestamp en secondes)
+    return decoded.exp * 1000 > Date.now();
   }
 }
 

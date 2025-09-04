@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import { authService } from '../../services/authService';
 
 interface LoginCredentials {
-  email: string;     // ← Garde email pour correspondre à votre AuthForm
+  email: string;
   password: string;
 }
 
 interface RegisterData {
   username: string;
-  email: string;     // ← Garde email pour correspondre à votre AuthForm
+  email: string;
   password: string;
 }
 
@@ -39,6 +39,7 @@ export const useAuth = () => {
       setUsername(response.username);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de connexion');
+      throw err; // Propager l'erreur pour que le composant puisse la gérer
     } finally {
       setLoading(false);
     }
@@ -54,6 +55,7 @@ export const useAuth = () => {
       setUsername(response.username);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur d\'inscription');
+      throw err; // Propager l'erreur pour que le composant puisse la gérer
     } finally {
       setLoading(false);
     }
