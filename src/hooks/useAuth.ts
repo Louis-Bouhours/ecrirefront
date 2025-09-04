@@ -27,41 +27,19 @@ export const useAuth = () => {
         }
     };
 
-
-    checkAuth();
-  }, []);
-
-  const login = async (credentials: LoginCredentials) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await authService.login(credentials);
-      setIsAuthenticated(true);
-      setUsername(response.username);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur de connexion');
-      throw err; // Propager l'erreur pour que le composant puisse la gérer
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const register = async (userData: RegisterData) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await authService.register(userData);
-      setIsAuthenticated(true);
-      setUsername(response.username);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur d\'inscription');
-      throw err; // Propager l'erreur pour que le composant puisse la gérer
-    } finally {
-      setLoading(false);
-    }
-  };
+    const register = async (username: string, email: string, password: string) => {
+        setLoading(true);
+        try {
+            await authService.register({username, email, password});
+            const me = await authService.me();
+            setUser(me);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Erreur');
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const logout = async () => {
         await authService.logout();
