@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from '@tanstack/react-router'
 
 export const AuthForm: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -12,20 +15,27 @@ export const AuthForm: React.FC = () => {
   const { login, register, loading, error } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
 
-    if (isLogin) {
-      await login({
-        email: formData.email,
-        password: formData.password,
-      });
-    } else {
-      await register({
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-      });
+    e.preventDefault();
+    try {
+      if (isLogin) {
+        await login({
+          email: formData.email,
+          password: formData.password,
+        });
+      } else {
+        await register({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+        });
+      }
+      // Tanstack navigate to /general-chat
+      navigate({ to: '/general-chat' });
+    } catch (err) {
+      return alert(err)
     }
+
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
