@@ -1,4 +1,5 @@
 import { API_CONFIG } from '../src/config/api';
+
 import type { LoginRequest, RegisterRequest, AuthResponse, ChatTokenRequest } from '../src/config/api';
 import { jwtDecode } from "/IdeaProjects/ecrirefront/node_modules/jwt-decode/build/esm/index"
 
@@ -99,10 +100,10 @@ class AuthService {
       body: JSON.stringify({ username } as ChatTokenRequest),
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Échec de l\'obtention du token de chat');
+        if (!response.ok) throw new Error('Non authentifié');
+        return await response.json(); // claims (username, email, etc.)
     }
+
 
     const data = await response.json();
     return data.token;

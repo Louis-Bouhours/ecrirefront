@@ -1,21 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from '@tanstack/react-router';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export const AuthForm: React.FC = () => {
-  // UI state only
-  const [isLogin, setIsLogin] = useState(true);
-  const [showPassword, setShowPassword] = useState(false);
+    const [isLogin, setIsLogin] = useState(true);
+    const [showPassword, setShowPassword] = useState(false);
+    const [mounted, setMounted] = useState(false);
+    const [focusedField, setFocusedField] = useState<string | null>(null);
 
-  // Keep existing logic/state intact
-  const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-  });
-  const { login, register, loading, error } = useAuth();
+    const navigate = useNavigate();
+    const [formData, setFormData] = useState({
+        username: '',
+        email: '',
+        password: '',
+    });
+    const { login, register, loading, error } = useAuth();
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,241 +40,315 @@ export const AuthForm: React.FC = () => {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+    
 
-  return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-slate-950 to-gray-900">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-2xl p-6 shadow-xl"
-      >
-        {/* Header with logo */}
-        <div className="flex items-center gap-4 mb-6">
-          <motion.div
-            whileHover={{ rotate: 10, scale: 1.05 }}
-            className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-indigo-600/20 to-cyan-500/20 border border-slate-700"
-          >
-            <svg viewBox="0 0 24 24" width="24" height="24">
-              <defs>
-                <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor="#6366f1" />
-                  <stop offset="100%" stopColor="#22d3ee" />
-                </linearGradient>
-              </defs>
-              <path
-                fill="url(#g)"
-                d="M12 2l2.39 4.84L20 7.27l-3.73 3.64.88 5.15L12 13.77 6.85 16.06l.88-5.15L4 7.27l5.61-.43L12 2z"
-              />
-            </svg>
-          </motion.div>
-          <div>
-            <h1 className="text-xl font-bold text-white m-0">Bienvenue</h1>
-            <p className="text-sm text-slate-400 mt-1">
-              {isLogin
-                ? 'Ravi de vous revoir. Connectez-vous pour continuer.'
-                : 'Créez votre compte en quelques secondes.'}
-            </p>
-          </div>
-        </div>
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFormData({
+            ...formData,
+            [e.target.name]: e.target.value,
+        });
+    };
 
-        {/* Toggle between login and register */}
-        <div className="grid grid-cols-2 bg-slate-800/50 rounded-xl p-1 mb-6">
-          <motion.button
-            onClick={() => setIsLogin(true)}
-            className={`py-2.5 px-4 rounded-lg text-sm font-medium transition-colors ${
-              isLogin
-                ? 'bg-gradient-to-r from-indigo-600/50 to-cyan-500/50 text-white'
-                : 'text-slate-400 hover:text-white'
-            }`}
-            whileTap={{ scale: 0.97 }}
-          >
-            Connexion
-          </motion.button>
-          <motion.button
-            onClick={() => setIsLogin(false)}
-            className={`py-2.5 px-4 rounded-lg text-sm font-medium transition-colors ${
-              !isLogin
-                ? 'bg-gradient-to-r from-indigo-600/50 to-cyan-500/50 text-white'
-                : 'text-slate-400 hover:text-white'
-            }`}
-            whileTap={{ scale: 0.97 }}
-          >
-            Inscription
-          </motion.button>
-        </div>
+    if (!mounted) return null;
 
-        {/* Error message */}
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-start gap-3 bg-red-500/10 border border-red-500/30 text-red-200 p-3 rounded-lg mb-4"
-          >
-            <svg className="w-5 h-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-            </svg>
-            <p className="text-sm leading-tight">{error}</p>
-          </motion.div>
-        )}
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
+            {/* Background Effects */}
+            <div className="absolute inset-0">
+                <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
+                <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-cyan-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.03)_1px,transparent_1px)] bg-[size:100px_100px]" />
+            </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Username field (only for register) */}
-          {!isLogin && (
+            {/* Main Container */}
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="space-y-2"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                className="relative z-10 w-full max-w-md"
             >
-              <label htmlFor="username" className="block text-sm font-medium text-slate-300">
-                Nom d'utilisateur
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-slate-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                  </svg>
+                {/* Glass Card */}
+                <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-8 shadow-2xl">
+                    {/* Logo Section */}
+                    <motion.div
+                        initial={{ y: -20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.2, duration: 0.6 }}
+                        className="text-center mb-8"
+                    >
+                        <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-tr from-blue-500 to-cyan-400 rounded-2xl mb-4 relative">
+                            <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                                className="absolute inset-2 border-2 border-white/30 rounded-xl"
+                            />
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" className="relative z-10">
+                                <path d="M12 2L22 8.5V15.5C22 19.64 18.64 23 12 23C5.36 23 2 19.64 2 15.5V8.5L12 2Z"
+                                      stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                <path d="M8 12L11 15L16 9"
+                                      stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                        </div>
+                        <h1 className="text-2xl font-bold text-white mb-2">
+                            {isLogin ? 'Bon retour' : 'Commencer'}
+                        </h1>
+                        <p className="text-blue-200/70 text-sm">
+                            {isLogin ? 'Connexion a votre compte' : 'Création de votre compte'}
+                        </p>
+                    </motion.div>
+
+                    {/* Tab Switcher */}
+                    <motion.div
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.3, duration: 0.6 }}
+                        className="relative mb-8"
+                    >
+                        <div className="relative bg-white/5 p-1 rounded-2xl">
+                            <motion.div
+                                layout
+                                className="absolute top-1 bottom-1 bg-gradient-to-r from-blue-500 to-cyan-400 rounded-xl shadow-lg"
+                                initial={false}
+                                animate={{
+                                    left: isLogin ? '4px' : '50%',
+                                    right: isLogin ? '50%' : '4px'
+                                }}
+                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            />
+                            <div className="relative z-10 grid grid-cols-2 gap-2">
+                                <button
+                                    onClick={() => setIsLogin(true)}
+                                    className={`py-3 px-4 text-sm font-semibold rounded-xl transition-colors duration-200  ${
+                                        isLogin ? 'text-white' : 'text-blue-200/60 hover:text-blue-200'
+                                    }`}
+                                >
+                                    Connexion
+                                </button>
+                                <button
+                                    onClick={() => setIsLogin(false)}
+                                    className={`py-3 px-4 text-sm font-semibold rounded-xl transition-colors duration-200 ${
+                                        !isLogin ? 'text-white' : 'text-blue-200/60 hover:text-blue-200'
+                                    }`}
+                                >
+                                    Crée un compte
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+
+                    {/* Error Message */}
+                    <AnimatePresence>
+                        {error && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10, height: 0 }}
+                                animate={{ opacity: 1, y: 0, height: 'auto' }}
+                                exit={{ opacity: 0, y: -10, height: 0 }}
+                                className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl backdrop-blur-sm"
+                            >
+                                <div className="flex items-center text-red-200">
+                                    <svg className="w-5 h-5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                    </svg>
+                                    <span className="text-sm font-medium">{error}</span>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Form */}
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Username Field */}
+                        <AnimatePresence>
+                            {!isLogin && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    transition={{ duration: 0.3 }}
+                                >
+                                    <div className="relative group">
+                                        <input
+                                            type="text"
+                                            name="username"
+                                            placeholder="Nom d'utilisateur"
+                                            value={formData.username}
+                                            onChange={handleInputChange}
+                                            onFocus={() => setFocusedField('username')}
+                                            onBlur={() => setFocusedField(null)}
+                                            className="w-full px-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-blue-200/50 focus:outline-none focus:border-blue-400/50 focus:bg-white/10 transition-all duration-300"
+                                            required
+                                        />
+                                        <motion.div
+                                            className="absolute inset-0 rounded-2xl border-2 border-blue-400/50 pointer-events-none"
+                                            initial={{ opacity: 0, scale: 1.05 }}
+                                            animate={{
+                                                opacity: focusedField === 'username' ? 1 : 0,
+                                                scale: focusedField === 'username' ? 1 : 1.05
+                                            }}
+                                            transition={{ duration: 0.2 }}
+                                        />
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                            <svg className={`w-5 h-5 transition-colors ${focusedField === 'username' ? 'text-blue-400' : 'text-blue-200/40'}`}
+                                                 fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Email Field */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.4, duration: 0.6 }}
+                        >
+                            <div className="relative group">
+                                <input
+                                    type="email"
+                                    name="email"
+                                    placeholder="Email"
+                                    value={formData.email}
+                                    onChange={handleInputChange}
+                                    onFocus={() => setFocusedField('email')}
+                                    onBlur={() => setFocusedField(null)}
+                                    className="w-full px-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-blue-200/50 focus:outline-none focus:border-blue-400/50 focus:bg-white/10 transition-all duration-300"
+                                    required
+                                />
+                                <motion.div
+                                    className="absolute inset-0 rounded-2xl border-2 border-blue-400/50 pointer-events-none"
+                                    initial={{ opacity: 0, scale: 1.05 }}
+                                    animate={{
+                                        opacity: focusedField === 'email' ? 1 : 0,
+                                        scale: focusedField === 'email' ? 1 : 1.05
+                                    }}
+                                    transition={{ duration: 0.2 }}
+                                />
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                    <svg className={`w-5 h-5 transition-colors ${focusedField === 'email' ? 'text-blue-400' : 'text-blue-200/40'}`}
+                                         fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                                        <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </motion.div>
+
+                        {/* Password Field */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.5, duration: 0.6 }}
+                        >
+                            <div className="relative group">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    name="password"
+                                    placeholder="Mot de passe"
+                                    value={formData.password}
+                                    onChange={handleInputChange}
+                                    onFocus={() => setFocusedField('password')}
+                                    onBlur={() => setFocusedField(null)}
+                                    className="w-full px-4 py-4 pr-12 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-blue-200/50 focus:outline-none focus:border-blue-400/50 focus:bg-white/10 transition-all duration-300"
+                                    required
+                                />
+                                <motion.div
+                                    className="absolute inset-0 rounded-2xl border-2 border-blue-400/50 pointer-events-none"
+                                    initial={{ opacity: 0, scale: 1.05 }}
+                                    animate={{
+                                        opacity: focusedField === 'password' ? 1 : 0,
+                                        scale: focusedField === 'password' ? 1 : 1.05
+                                    }}
+                                    transition={{ duration: 0.2 }}
+                                />
+                                <motion.button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-200/40 hover:text-blue-400 transition-colors"
+                                    whileTap={{ scale: 0.9 }}
+                                >
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        {showPassword ? (
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        ) : (
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                                  d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L12 12m-3.182-3.182l4.243 4.243" />
+                                        )}
+                                    </svg>
+                                </motion.button>
+                            </div>
+                        </motion.div>
+
+                        {/* Submit Button */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.6, duration: 0.6 }}
+                        >
+                            <motion.button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full py-4 px-6 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-semibold rounded-2xl shadow-xl disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
+                                whileHover={!loading ? { scale: 1.02 } : {}}
+                                whileTap={!loading ? { scale: 0.98 } : {}}
+                            >
+                                <motion.div
+                                    className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-500"
+                                    initial={{ x: '-100%' }}
+                                    whileHover={{ x: '0%' }}
+                                    transition={{ duration: 0.3 }}
+                                />
+                                <span className="relative z-10 flex items-center justify-center">
+                                    {loading ? (
+                                        <>
+                                            <motion.svg
+                                                className="w-5 h-5 mr-2"
+                                                animate={{ rotate: 360 }}
+                                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                            </motion.svg>
+                                            Chargement...
+                                        </>
+                                    ) : (
+                                        <>
+                                            {isLogin ? 'Sign In' : 'Create Account'}
+                                            <motion.svg
+                                                className="w-5 h-5 ml-2"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                animate={{ x: [0, 4, 0] }}
+                                                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                                            >
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                                            </motion.svg>
+                                        </>
+                                    )}
+                                </span>
+                            </motion.button>
+                        </motion.div>
+                    </form>
+
                 </div>
-                <input
-                  id="username"
-                  type="text"
-                  name="username"
-                  placeholder="Ex. jean.dupont"
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  className="bg-slate-800/60 border border-slate-700 text-white pl-10 pr-4 py-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                  required
-                  autoComplete="username"
+
+                {/* Floating Elements */}
+                <motion.div
+                    className="absolute -top-8 -right-8 w-16 h-16 bg-gradient-to-tr from-blue-400/20 to-cyan-400/20 rounded-2xl backdrop-blur-sm"
+                    animate={{ rotate: [0, 180, 360] }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
                 />
-              </div>
+                <motion.div
+                    className="absolute -bottom-4 -left-4 w-12 h-12 bg-gradient-to-tr from-cyan-400/20 to-blue-400/20 rounded-xl backdrop-blur-sm"
+                    animate={{ rotate: [360, 180, 0] }}
+                    transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+                />
             </motion.div>
-          )}
-
-          {/* Email field */}
-          <div className="space-y-2">
-            <label htmlFor="email" className="block text-sm font-medium text-slate-300">
-              Email
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-slate-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                  <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                </svg>
-              </div>
-              <input
-                id="email"
-                type="email"
-                name="email"
-                placeholder="vous@exemple.com"
-                value={formData.email}
-                onChange={handleInputChange}
-                className="bg-slate-800/60 border border-slate-700 text-white pl-10 pr-4 py-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                required
-                autoComplete={isLogin ? 'email' : 'new-email'}
-              />
-            </div>
-          </div>
-
-          {/* Password field */}
-          <div className="space-y-2">
-            <label htmlFor="password" className="block text-sm font-medium text-slate-300">
-              Mot de passe
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-slate-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                placeholder={isLogin ? 'Votre mot de passe' : 'Créez un mot de passe'}
-                value={formData.password}
-                onChange={handleInputChange}
-                className="bg-slate-800/60 border border-slate-700 text-white pl-10 pr-10 py-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                required
-                autoComplete={isLogin ? 'current-password' : 'new-password'}
-              />
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-white"
-              >
-                {showPassword ? (
-                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                    <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                  </svg>
-                ) : (
-                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
-                    <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
-                  </svg>
-                )}
-              </motion.button>
-            </div>
-            {!isLogin && (
-              <p className="text-xs text-slate-500 mt-2">
-                8+ caractères recommandés, mélangez lettres, chiffres et symboles.
-              </p>
-            )}
-          </div>
-
-          {/* Submit button */}
-          <motion.button
-            type="submit"
-            disabled={loading}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className={`w-full py-3 px-4 mt-6 rounded-xl font-semibold text-white ${
-              loading
-                ? 'bg-slate-700 cursor-not-allowed'
-                : 'bg-gradient-to-r from-indigo-600 to-cyan-500 hover:shadow-lg hover:shadow-indigo-500/20'
-            } focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all`}
-          >
-            {loading ? (
-              <div className="flex items-center justify-center">
-                <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>Chargement...</span>
-              </div>
-            ) : isLogin ? (
-              'Se connecter'
-            ) : (
-              "S'inscrire"
-            )}
-          </motion.button>
-        </form>
-
-        {/* Footer text */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-slate-400">
-            {isLogin ? "Pas encore de compte ?" : 'Déjà un compte ?'}{' '}
-            <motion.button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              whileHover={{ scale: 1.05 }}
-              className="text-cyan-400 font-semibold hover:text-cyan-300 focus:outline-none"
-            >
-              {isLogin ? 'Créer un compte' : 'Se connecter'}
-            </motion.button>
-          </p>
         </div>
-      </motion.div>
-    </div>
-  );
+    );
 };

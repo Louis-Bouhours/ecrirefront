@@ -1,30 +1,32 @@
 import { useState, useEffect } from 'react';
 import { authService } from '../../services/authService';
 
-interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-interface RegisterData {
-  username: string;
-  email: string;
-  password: string;
-}
-
 export const useAuth = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [username, setUsername] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+    const [user, setUser] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const checkAuth = () => {
-      const isAuth = authService.isAuthenticated();
-      const user = authService.getUsername();
-      setIsAuthenticated(isAuth);
-      setUsername(user);
+    useEffect(() => {
+        authService.me()
+            .then(setUser)
+            .catch(() => setUser(null))
+            .finally(() => setLoading(false));
+    }, []);
+
+    const login = async (email: string, password: string) => {
+        setLoading(true);
+        try {
+            await authService.login(email, password);
+            const me = await authService.me();
+            setUser(me);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Erreur');
+            throw err;
+        } finally {
+            setLoading(false);
+        }
     };
+
 
     checkAuth();
   }, []);
@@ -61,19 +63,10 @@ export const useAuth = () => {
     }
   };
 
-  const logout = () => {
-    authService.logout();
-    setIsAuthenticated(false);
-    setUsername(null);
-  };
+    const logout = async () => {
+        await authService.logout();
+        setUser(null);
+    };
 
-  return {
-    isAuthenticated,
-    username,
-    loading,
-    error,
-    login,
-    register,
-    logout,
-  };
+    return { user, loading, error, login, register, logout };
 };

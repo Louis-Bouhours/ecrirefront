@@ -6,7 +6,8 @@ export const API_CONFIG = {
     REGISTER: '/api/register',
     LOGOUT: '/api/logout',
     CHAT_TOKEN: '/chat/token',
-    CHAT_HISTORY: '/chat/history', // REST pour charger l'historique depuis Mongo
+    CHAT_HISTORY: '/chat/history',
+      ME: '/api/me',
   },
   SOCKET_URL: import.meta.env.VITE_SOCKET_URL, // URL pour Socket.IO
 }
