@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useChat } from '../hooks/useChat';
 import { useAuth } from '../hooks/useAuth';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export const ChatRoom: React.FC = () => {
   const [messageInput, setMessageInput] = useState('');
@@ -28,10 +29,11 @@ export const ChatRoom: React.FC = () => {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (messageInput.trim()) {
-      sendMessage(messageInput);
-      setMessageInput('');
-    }
+    const text = messageInput.trim();
+    if (!text) return;
+
+    (sendMessage as any)({ text, username });
+    setMessageInput('');
   };
 
   const handleLogout = () => {
@@ -39,369 +41,203 @@ export const ChatRoom: React.FC = () => {
     logout();
   };
 
-  const formatTime = (timestamp: Date) => {
-    return new Date(timestamp).toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  const formatTime = (timestamp: Date) =>
+    new Date(timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
   if (loading) {
     return (
-      <div style={loadingContainerStyle}>
-        <div style={loadingSpinnerStyle}>Connexion au chat...</div>
+      <div className="flex items-center justify-center h-screen bg-slate-50">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col items-center space-y-3"
+        >
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+            className="w-8 h-8 border-t-2 border-indigo-600 rounded-full"
+          ></motion.div>
+          <p className="text-slate-600 font-medium">Connexion au chat...</p>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div style={containerStyle}>
+    <div className="h-screen flex flex-col bg-slate-50">
       {/* Header */}
-      <div style={headerStyle}>
-        <div style={headerLeftStyle}>
-          <h1 style={titleStyle}>Écrire - Chat</h1>
-          <div style={statusStyle}>
-            <span style={{
-              ...statusIndicatorStyle,
-              backgroundColor: isConnected ? '#4caf50' : '#f44336'
-            }}></span>
-            {isConnected ? 'Connecté' : 'Déconnecté'}
-          </div>
-        </div>
-        <div style={headerRightStyle}>
-          <span style={usernameStyle}>👋 {username}</span>
-          <button onClick={handleLogout} style={logoutButtonStyle}>
-            Déconnexion
-          </button>
-        </div>
-      </div>
-
-      <div style={mainContentStyle}>
-        {/* Sidebar avec utilisateurs en ligne */}
-        <div style={sidebarStyle}>
-          <h3 style={sidebarTitleStyle}>
-            Utilisateurs en ligne ({onlineUsers.length})
-          </h3>
-          <div style={userListStyle}>
-            {onlineUsers.map((user, index) => (
-              <div key={index} style={userItemStyle}>
-                <div style={userAvatarStyle}>
-                  {user.charAt(0).toUpperCase()}
-                </div>
-                <span style={userNameStyle}>{user}</span>
+      <header className="bg-white border-b border-slate-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-xl font-semibold text-slate-800">Écrire - Chat</h1>
+              <div className="flex items-center space-x-2">
+                <span className={`inline-block w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                <span className="text-sm text-slate-500">{isConnected ? 'Connecté' : 'Déconnecté'}</span>
               </div>
-            ))}
+            </div>
+            <div className="flex items-center space-x-4">
+              <span className="text-slate-700 font-medium">{username}</span>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleLogout}
+                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 text-sm rounded-md transition-colors"
+              >
+                Déconnexion
+              </motion.button>
+            </div>
           </div>
         </div>
+      </header>
 
-        {/* Zone de messages */}
-        <div style={chatAreaStyle}>
-          {error && (
-            <div style={errorBannerStyle}>
-              ⚠️ {error}
-              <button onClick={connectToChat} style={retryButtonStyle}>
-                Réessayer
-              </button>
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <aside className="w-64 bg-white border-r border-slate-200 hidden md:block">
+          <div className="p-4">
+            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">
+              Utilisateurs en ligne ({onlineUsers.length})
+            </h3>
+            <div className="space-y-2">
+              <AnimatePresence>
+                {onlineUsers.map((user, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-50"
+                  >
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                      <span className="text-indigo-700 text-sm font-medium">{user.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <span className="text-slate-700 text-sm font-medium truncate">{user}</span>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
-          )}
+          </div>
+        </aside>
 
-          <div style={messagesContainerStyle}>
+        {/* Chat Area */}
+        <main className="flex-1 flex flex-col bg-white">
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="bg-red-50 border-b border-red-200 py-3 px-4 flex justify-between items-center"
+              >
+                <p className="text-red-800 text-sm">{error}</p>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={connectToChat}
+                  className="bg-red-100 text-red-800 px-3 py-1 text-xs rounded-md hover:bg-red-200 transition-colors"
+                >
+                  Réessayer
+                </motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-3" id="messages-container">
             {messages.length === 0 ? (
-              <div style={emptyStateStyle}>
-                <p>Aucun message pour le moment...</p>
-                <p>Commencez la conversation ! 💬</p>
+              <div className="h-full flex items-center justify-center">
+                <div className="text-center p-6 max-w-sm">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="mb-4"
+                  >
+                    <div className="w-16 h-16 mx-auto bg-indigo-100 rounded-full flex items-center justify-center">
+                      <svg className="w-8 h-8 text-indigo-600" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" clipRule="evenodd"></path>
+                      </svg>
+                    </div>
+                  </motion.div>
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-slate-600 mb-1"
+                  >
+                    Aucun message pour le moment
+                  </motion.p>
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                    className="text-slate-500 text-sm"
+                  >
+                    Commencez la conversation !
+                  </motion.p>
+                </div>
               </div>
             ) : (
               messages.map((message, index) => (
-                <div
+                <motion.div
                   key={index}
-                  style={{
-                    ...messageStyle,
-                    ...(message.username === username ? myMessageStyle : otherMessageStyle)
-                  }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className={`flex ${message.username === username ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div style={messageHeaderStyle}>
-                    <span style={messageAuthorStyle}>{message.username}</span>
-                    <span style={messageTimeStyle}>
+                  <div className={`max-w-[75%] rounded-lg px-4 py-2 shadow-sm ${
+                    message.username === username
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-slate-100 text-slate-800'
+                  }`}>
+                    {message.username !== username && (
+                      <div className="text-xs font-medium mb-1 text-slate-500">{message.username}</div>
+                    )}
+                    <div className="text-sm">{message.text}</div>
+                    <div className={`text-right text-xs mt-1 ${
+                      message.username === username ? 'text-indigo-200' : 'text-slate-400'
+                    }`}>
                       {formatTime(message.timestamp)}
-                    </span>
+                    </div>
                   </div>
-                  <div style={messageContentStyle}>{message.text}</div>
-                </div>
+                </motion.div>
               ))
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Zone de saisie */}
-          <form onSubmit={handleSendMessage} style={messageFormStyle}>
-            <input
-              type="text"
-              value={messageInput}
-              onChange={(e) => setMessageInput(e.target.value)}
-              placeholder="Tapez votre message..."
-              style={messageInputStyle}
-              disabled={!isConnected}
-            />
-            <button
-              type="submit"
-              disabled={!isConnected || !messageInput.trim()}
-              style={{
-                ...sendButtonStyle,
-                ...((!isConnected || !messageInput.trim()) ? disabledButtonStyle : {})
-              }}
-            >
-              📤
-            </button>
-          </form>
-        </div>
+          {/* Message Input */}
+          <div className="border-t border-slate-200 p-4">
+            <form onSubmit={handleSendMessage} className="flex space-x-2">
+              <input
+                type="text"
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
+                placeholder="Tapez votre message..."
+                disabled={!isConnected}
+                className="flex-1 rounded-lg border border-slate-300 py-2 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-400"
+              />
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                type="submit"
+                disabled={!isConnected || !messageInput.trim()}
+                className={`rounded-lg px-4 py-2 text-white transition-colors ${
+                  !isConnected || !messageInput.trim()
+                    ? 'bg-slate-400 cursor-not-allowed'
+                    : 'bg-indigo-600 hover:bg-indigo-700'
+                }`}
+              >
+                <span className="hidden sm:inline mr-1">Envoyer</span>
+                <svg className="w-5 h-5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              </motion.button>
+            </form>
+          </div>
+        </main>
       </div>
     </div>
   );
-};
-
-// Styles
-const containerStyle: React.CSSProperties = {
-  height: '100vh',
-  display: 'flex',
-  flexDirection: 'column',
-  backgroundColor: '#f8f9fa',
-};
-
-const loadingContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  height: '100vh',
-  backgroundColor: '#f8f9fa',
-};
-
-const loadingSpinnerStyle: React.CSSProperties = {
-  fontSize: '18px',
-  color: '#6c757d',
-};
-
-const headerStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: '15px 20px',
-  backgroundColor: 'white',
-  borderBottom: '1px solid #e9ecef',
-  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-};
-
-const headerLeftStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '20px',
-};
-
-const headerRightStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '15px',
-};
-
-const titleStyle: React.CSSProperties = {
-  margin: 0,
-  color: '#343a40',
-  fontSize: '24px',
-};
-
-const statusStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-  fontSize: '14px',
-  color: '#6c757d',
-};
-
-const statusIndicatorStyle: React.CSSProperties = {
-  width: '8px',
-  height: '8px',
-  borderRadius: '50%',
-};
-
-const usernameStyle: React.CSSProperties = {
-  fontSize: '16px',
-  fontWeight: 'bold',
-  color: '#495057',
-};
-
-const logoutButtonStyle: React.CSSProperties = {
-  padding: '8px 16px',
-  backgroundColor: '#dc3545',
-  color: 'white',
-  border: 'none',
-  borderRadius: '4px',
-  cursor: 'pointer',
-  fontSize: '14px',
-};
-
-const mainContentStyle: React.CSSProperties = {
-  display: 'flex',
-  flex: 1,
-  overflow: 'hidden',
-};
-
-const sidebarStyle: React.CSSProperties = {
-  width: '250px',
-  backgroundColor: 'white',
-  borderRight: '1px solid #e9ecef',
-  padding: '20px',
-  overflowY: 'auto',
-};
-
-const sidebarTitleStyle: React.CSSProperties = {
-  margin: '0 0 15px 0',
-  color: '#495057',
-  fontSize: '16px',
-  fontWeight: 'bold',
-};
-
-const userListStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '10px',
-};
-
-const userItemStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-  padding: '8px',
-  borderRadius: '4px',
-  backgroundColor: '#f8f9fa',
-};
-
-const userAvatarStyle: React.CSSProperties = {
-  width: '32px',
-  height: '32px',
-  borderRadius: '50%',
-  backgroundColor: '#007bff',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  color: 'white',
-  fontSize: '14px',
-  fontWeight: 'bold',
-};
-
-const userNameStyle: React.CSSProperties = {
-  fontSize: '14px',
-  color: '#495057',
-};
-
-const chatAreaStyle: React.CSSProperties = {
-  flex: 1,
-  display: 'flex',
-  flexDirection: 'column',
-  backgroundColor: 'white',
-};
-
-const errorBannerStyle: React.CSSProperties = {
-  backgroundColor: '#f8d7da',
-  color: '#721c24',
-  padding: '10px 20px',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  borderBottom: '1px solid #f5c6cb',
-};
-
-const retryButtonStyle: React.CSSProperties = {
-  padding: '4px 8px',
-  backgroundColor: '#dc3545',
-  color: 'white',
-  border: 'none',
-  borderRadius: '3px',
-  cursor: 'pointer',
-  fontSize: '12px',
-};
-
-const messagesContainerStyle: React.CSSProperties = {
-  flex: 1,
-  overflowY: 'auto',
-  padding: '20px',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '15px',
-};
-
-const emptyStateStyle: React.CSSProperties = {
-  textAlign: 'center',
-  color: '#6c757d',
-  marginTop: '50px',
-};
-
-const messageStyle: React.CSSProperties = {
-  maxWidth: '70%',
-  padding: '12px',
-  borderRadius: '12px',
-  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-};
-
-const myMessageStyle: React.CSSProperties = {
-  alignSelf: 'flex-end',
-  backgroundColor: '#007bff',
-  color: 'white',
-};
-
-const otherMessageStyle: React.CSSProperties = {
-  alignSelf: 'flex-start',
-  backgroundColor: '#e9ecef',
-  color: '#495057',
-};
-
-const messageHeaderStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  marginBottom: '5px',
-  fontSize: '12px',
-  opacity: 0.8,
-};
-
-const messageAuthorStyle: React.CSSProperties = {
-  fontWeight: 'bold',
-};
-
-const messageTimeStyle: React.CSSProperties = {
-  fontSize: '11px',
-};
-
-const messageContentStyle: React.CSSProperties = {
-  fontSize: '14px',
-  lineHeight: '1.4',
-};
-
-const messageFormStyle: React.CSSProperties = {
-  display: 'flex',
-  padding: '20px',
-  borderTop: '1px solid #e9ecef',
-  gap: '10px',
-};
-
-const messageInputStyle: React.CSSProperties = {
-  flex: 1,
-  padding: '12px',
-  border: '1px solid #ced4da',
-  borderRadius: '25px',
-  fontSize: '14px',
-  outline: 'none',
-};
-
-const sendButtonStyle: React.CSSProperties = {
-  padding: '12px 20px',
-  backgroundColor: '#007bff',
-  color: 'white',
-  border: 'none',
-  borderRadius: '25px',
-  cursor: 'pointer',
-  fontSize: '16px',
-};
-
-const disabledButtonStyle: React.CSSProperties = {
-  backgroundColor: '#6c757d',
-  cursor: 'not-allowed',
 };
