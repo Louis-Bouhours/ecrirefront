@@ -1,15 +1,29 @@
 import { createRootRouteWithContext, createRoute, createRouter, Outlet, redirect } from '@tanstack/react-router';
 import { AuthForm } from '../components/AuthForm.tsx';
 import ChatPage from '../components/ChatPage.tsx';
+import {authService} from "../../services/authService.ts";
 
 // Root route with typed context
-export const rootRoute = createRootRouteWithContext<{ isAuthenticated: boolean }>()();
+export const rootRoute = createRootRouteWithContext<{ isAuthenticated: boolean }>()({
+    beforeLoad: async () => {
+        try {
+            await authService.me();
+            return { isAuthenticated: true };
+        } catch {
+            return { isAuthenticated: false };
+        }
+    },
+});
 
-// Public routes
 const loginRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: 'login',
-  component: AuthForm,
+    getParentRoute: () => rootRoute,
+    path: 'login',
+    component: AuthForm,
+    beforeLoad: ({ context }) => {
+        if (context.isAuthenticated) {
+            throw redirect({ to: '/general-chat' });
+        }
+    },
 });
 
 // Page de chat générale (publique pour tester rapidement)
@@ -17,6 +31,11 @@ const generalChatRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'general-chat',
   component: ChatPage,
+    beforeLoad: ({ context }) => {
+        if (!context.isAuthenticated) {
+            throw redirect({ to: '/login' });
+        }
+    },
 });
 
 // Protected parent route
@@ -28,6 +47,7 @@ const protectedRoute = createRoute({
     if (!context.isAuthenticated) {
       throw redirect({ to: '/login' });
     }
+    throw redirect({ to: '/general-chat'})
   },
 }).addChildren([
   createRoute({
@@ -47,9 +67,7 @@ export const routeTree = rootRoute.addChildren([
 // Router configuration
 export const router = createRouter({
   routeTree,
-  context: {
-    isAuthenticated: false,
-  },
+    context: undefined as any,
 });
 
 declare module '@tanstack/react-router' {
