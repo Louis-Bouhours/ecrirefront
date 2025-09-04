@@ -17,23 +17,30 @@ export const AuthForm: React.FC = () => {
     });
     const { login, register, loading, error } = useAuth();
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            if (isLogin) {
-                await login(formData.email, formData.password);
-            } else {
-                await register(formData.username, formData.email, formData.password);
-            }
-            navigate({ to: '/general-chat' });
-        } catch (err) {
-            return;
-        }
-    };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (isLogin) {
+        await login({
+          email: formData.email,
+          password: formData.password,
+        });
+      } else {
+        await register({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+        });
+      }
+      navigate({ to: '/general-chat' });
+    } catch (err) {
+      // L'erreur est déjà gérée par le hook useAuth et affichée dans le composant
+      console.error('Erreur d\'authentification:', err);
+    }
+  };
+
+    
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({

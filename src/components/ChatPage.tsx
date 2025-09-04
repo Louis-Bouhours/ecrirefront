@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { authService } from '../../services/authService.ts';
 
 interface Message {
     id: string;
@@ -127,6 +128,7 @@ const ChatPage: React.FC = () => {
         ws.addEventListener('error', handleError);
         ws.addEventListener('message', handleMessage);
 
+
         return () => {
             ws.removeEventListener('open', handleOpen);
             ws.removeEventListener('close', handleClose);
@@ -140,6 +142,7 @@ const ChatPage: React.FC = () => {
         if (messageContainer) {
             messageContainer.addEventListener('scroll', handleScroll);
             return () => messageContainer.removeEventListener('scroll', handleScroll);
+
         }
     }, []);
 
@@ -235,7 +238,34 @@ const ChatPage: React.FC = () => {
                     </div>
                 </motion.div>
 
-                {/* Channel Info */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                authService.logout();
+                window.location.href = '/login';
+              }}
+              className="py-2 px-4 rounded-lg bg-white border border-slate-200 text-slate-700 font-medium shadow-sm hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            >
+              Déconnexion
+            </motion.button>
+          </div>
+        </motion.header>
+
+        {/* Main Chat */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="flex-1 bg-white rounded-xl shadow-sm border border-indigo-100 flex flex-col overflow-hidden"
+        >
+          {/* Messages */}
+          <div
+            ref={messagesContainerRef}
+            className="flex-1 overflow-y-auto p-6 space-y-5 scrollbar-thin scrollbar-thumb-indigo-200 scrollbar-track-transparent"
+          >
+            <AnimatePresence mode="wait">
+              {messages.length === 0 ? (
                 <motion.div
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
