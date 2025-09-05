@@ -49,7 +49,7 @@ export const useChat = () => {
     }
   }, []);
 
-  const sendMessage = useCallback((text: string) => {
+  const sendMessage: any = useCallback((text: string) => {
     if (text.trim() && isConnected) {
       chatService.sendMessage(text);
     }

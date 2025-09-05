@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-
 
 interface Message {
   id: string;
@@ -9,6 +8,15 @@ interface Message {
   timestamp: string;
   room: string;
   self?: boolean;
+}
+
+interface Room {
+  id: string;
+  name: string;
+  description?: string;
+  created_at: string;
+  is_general: boolean;
+  members: number;
 }
 
 interface RawHistory {
@@ -21,6 +29,7 @@ interface RawHistory {
   created_at?: string | number | Date;
   room?: string;
 }
+
 
 function isRawHistoryArray(data: unknown): data is RawHistory[] {
   return Array.isArray(data);
@@ -66,6 +75,7 @@ function openSharedSocket(url: string, onOpen?: () => void) {
 
 const ChatPage: React.FC = () => {
   const [username, setUsername] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -73,14 +83,18 @@ const ChatPage: React.FC = () => {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [scrollPosition, setScrollPosition] = useState({ current: 0, max: 0 });
   const [isAtBottom, setIsAtBottom] = useState(true);
-  const [isHovering, setIsHovering] = useState(false);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [currentRoom, setCurrentRoom] = useState<string>('general');
+  const [currentRoomName, setCurrentRoomName] = useState<string>('Général');
+  const [isCreateRoomModalOpen, setIsCreateRoomModalOpen] = useState(false);
+  const [newRoomName, setNewRoomName] = useState('');
+  const [newRoomDescription, setNewRoomDescription] = useState('');
+  const [newRoomMembers, setNewRoomMembers] = useState('');
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
 
-
-  const scrollTimeoutRef = useRef<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const room = useMemo(() => 'general', []);
 
   const handleScroll = useCallback(() => {
     if (!messagesContainerRef.current) return;
@@ -95,12 +109,13 @@ const ChatPage: React.FC = () => {
     setShowScrollButton(!atBottom && messages.length > 5);
   }, [messages.length]);
 
+  // Fetch user info
   useEffect(() => {
     const fromCookie = Cookies.get('username');
     if (fromCookie) {
       setUsername(fromCookie);
-      return;
     }
+
     fetch('/api/me', { credentials: 'include' })
       .then(async (res) => {
         if (!res.ok) throw new Error('unauthorized');
@@ -109,6 +124,7 @@ const ChatPage: React.FC = () => {
       .then((data) => {
         if (data?.username) {
           setUsername(data.username);
+          setUserId(data.id);
           try {
             Cookies.set('username', data.username);
           } catch (err) {
@@ -123,11 +139,35 @@ const ChatPage: React.FC = () => {
       });
   }, []);
 
+  // Fetch user rooms
   useEffect(() => {
-    if (!username) return;
+    if (!userId) return;
+
+    fetch('/api/rooms', { credentials: 'include' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('failed to fetch rooms');
+        return res.json();
+      })
+      .then((data: Room[]) => {
+        setRooms(data);
+        // If there are rooms, ensure the general room is set as default
+        const generalRoom = data.find(r => r.is_general);
+        if (generalRoom) {
+          setCurrentRoom(generalRoom.id);
+          setCurrentRoomName(generalRoom.name);
+        }
+      })
+      .catch((err) => console.debug('rooms fetch failed:', err));
+  }, [userId]);
+
+  // Fetch room messages when room changes
+  useEffect(() => {
+    if (!username || !currentRoom) return;
+
     let cancelled = false;
     setMessages([]);
-    fetch(`/api/messages?room=${encodeURIComponent(room)}&limit=200`, { credentials: 'include' })
+
+    fetch(`/api/messages?room=${encodeURIComponent(currentRoom)}&limit=200`, { credentials: 'include' })
       .then(async (res) => {
         if (!res.ok) throw new Error('history fetch failed');
         return res.json();
@@ -142,16 +182,19 @@ const ChatPage: React.FC = () => {
           timestamp: typeof raw.timestamp === 'string'
             ? raw.timestamp
             : new Date(raw.timestamp ?? raw.created_at ?? Date.now()).toISOString(),
-          room: raw.room ?? room,
+          room: raw.room ?? currentRoom,
         }));
         setMessages(mapped);
       })
       .catch((err) => console.debug('history load failed:', err));
-    return () => { cancelled = true; };
-  }, [room, username]);
 
+    return () => { cancelled = true; };
+  }, [currentRoom, username]);
+
+  // WebSocket connection
   useEffect(() => {
     if (!username) return;
+
     const url = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
     const ws = openSharedSocket(url);
     wsRef.current = ws;
@@ -170,16 +213,19 @@ const ChatPage: React.FC = () => {
     const handleMessage = (ev: MessageEvent) => {
       try {
         const raw = JSON.parse(ev.data);
-        const msg: Message = {
-          id: raw?.id ?? `srv-${Date.now()}`,
-          username: raw?.username ?? 'Inconnu',
-          text: raw?.text ?? '',
-          timestamp: typeof raw?.timestamp === 'string'
-            ? raw.timestamp
-            : new Date(raw?.timestamp ?? Date.now()).toISOString(),
-          room: raw?.room ?? room,
-        };
-        setMessages((prev) => [...prev, msg]);
+        // Only add messages for the current room
+        if (raw?.room === currentRoom) {
+          const msg: Message = {
+            id: raw?.id ?? `srv-${Date.now()}`,
+            username: raw?.username ?? 'Inconnu',
+            text: raw?.text ?? '',
+            timestamp: typeof raw?.timestamp === 'string'
+              ? raw.timestamp
+              : new Date(raw?.timestamp ?? Date.now()).toISOString(),
+            room: raw?.room ?? currentRoom,
+          };
+          setMessages((prev) => [...prev, msg]);
+        }
       } catch (err) {
         console.warn('WS message parse error:', err);
       }
@@ -196,7 +242,7 @@ const ChatPage: React.FC = () => {
       ws.removeEventListener('error', handleError);
       ws.removeEventListener('message', handleMessage);
     };
-  }, [room, username]);
+  }, [currentRoom, username]);
 
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -221,17 +267,70 @@ const ChatPage: React.FC = () => {
       username,
       text,
       timestamp: new Date().toISOString(),
-      room,
+      room: currentRoom,
       self: true,
     };
     setMessages((prev) => [...prev, local]);
     setInput('');
     setSending(true);
     try {
-      wsRef.current?.send(JSON.stringify({ text, room, username }));
+      wsRef.current?.send(JSON.stringify({ text, room: currentRoom, username }));
     } finally {
       setSending(false);
     }
+  };
+
+  const createRoom = async () => {
+    if (!newRoomName.trim() || isCreatingRoom) return;
+
+    setIsCreatingRoom(true);
+
+    try {
+      const response = await fetch('/api/rooms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: newRoomName.trim(),
+          description: newRoomDescription.trim(),
+          members: newRoomMembers.split(',').map(email => email.trim()).filter(email => email),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create room');
+      }
+
+      const newRoom = await response.json();
+
+      // Refresh the rooms list
+      const roomsResponse = await fetch('/api/rooms', { credentials: 'include' });
+      const rooms = await roomsResponse.json();
+      setRooms(rooms);
+
+      // Close modal and reset fields
+      setIsCreateRoomModalOpen(false);
+      setNewRoomName('');
+      setNewRoomDescription('');
+      setNewRoomMembers('');
+
+      // Switch to the new room
+      setCurrentRoom(newRoom.id);
+      setCurrentRoomName(newRoom.name);
+
+    } catch (error) {
+      console.error('Error creating room:', error);
+      alert('Erreur lors de la création de la room');
+    } finally {
+      setIsCreatingRoom(false);
+    }
+  };
+
+  const switchRoom = (roomId: string, roomName: string) => {
+    setCurrentRoom(roomId);
+    setCurrentRoomName(roomName);
   };
 
   const time = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -270,38 +369,15 @@ const ChatPage: React.FC = () => {
         <div className="absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.03)_1px,transparent_1px)] bg-[size:80px_80px]" />
         <div className="absolute top-20 left-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-20 right-20 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
-        <div className="flex-1 p-8 overflow-hidden">
 
-          <div
-            ref={messagesContainerRef}
-            className={`h-full overflow-y-auto pr-2 custom-scrollbar ${isHovering ? 'scrollbar-visible' : 'scrollbar-hidden'}`}
-            role="log"
-            aria-live="polite"
-            aria-label="Messages du chat"
-            tabIndex={0}
-            onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => setIsHovering(false)}
-          >
-            <AnimatePresence>
-              {messages.length === 0 ? (
-                <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="h-full flex items-center justify-center">
-                  {/* ... */}
-                </motion.div>
-              ) : (
-                <div className="space-y-6 pb-6">
-                  {/* ... */}
-                </div>
-              )}
-            </AnimatePresence>
-            <div ref={endRef} />
-          </div>
-        </div>
+        {/* Sidebar */}
         <motion.div
           initial={{ x: -100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.8 }}
           className="absolute left-0 top-0 h-full w-80 backdrop-blur-xl bg-white/5 border-r border-white/10 p-6 flex flex-col"
         >
+          {/* User profile */}
           <motion.div whileHover={{ scale: 1.02 }} className="backdrop-blur-sm bg-white/5 rounded-3xl p-6 border border-white/10 mb-6">
             <div className="flex items-center space-x-4">
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center font-bold text-xl text-white shadow-lg" style={{ backgroundColor: username ? generateUserColor(username) : '#6366F1' }}>
@@ -321,35 +397,80 @@ const ChatPage: React.FC = () => {
             </div>
           </motion.div>
 
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="backdrop-blur-sm bg-white/5 rounded-3xl p-6 border border-white/10 mb-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-500 to-cyan-400 flex items-center justify-center">
-                <span className="text-white font-bold text-xl">#</span>
-              </div>
-              <div>
-                <h3 className="text-white font-semibold">général</h3>
-                <p className="text-blue-200/70 text-sm">Salon principal</p>
-              </div>
+          {/* Rooms section */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-white text-lg font-semibold">Salons</h3>
+              <motion.button
+                whileHover={{ scale: 1.05, rotate: 90 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setIsCreateRoomModalOpen(true)}
+                className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 flex items-center justify-center text-white shadow-lg"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 3a1 1 0 00-1 1v5H4a1 1 0 100 2h5v5a1 1 0 102 0v-5h5a1 1 0 100-2h-5V4a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </motion.button>
             </div>
-            <div className="text-blue-200/70 text-sm">{messageCount} message{messageCount > 1 ? 's' : ''}</div>
-          </motion.div>
 
-          <div className="flex-1" />
+            {/* Rooms list */}
+            <div className="space-y-3">
+              {rooms.map(room => (
+                <motion.div
+                  key={room.id}
+                  whileHover={{ scale: 1.02, x: 5 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`p-4 rounded-2xl cursor-pointer transition-all duration-200 ${currentRoom === room.id ? 'bg-gradient-to-r from-blue-500/40 to-cyan-400/40 border border-white/20' : 'hover:bg-white/10 bg-white/5 border border-white/10'}`}
+                  onClick={() => switchRoom(room.id, room.name)}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-500/80 to-cyan-400/80 flex items-center justify-center">
+                      <span className="text-white font-bold">{room.is_general ? '#' : room.name.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <div>
+                      <h4 className="text-white font-medium">{room.name}</h4>
+                      <p className="text-blue-200/60 text-xs">{room.members} membre{room.members > 1 ? 's' : ''}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={async () => {
-              try { await fetch('http://localhost:8081/api/logout', { method: 'POST', credentials: 'include' }); } catch (err) { console.debug('Logout API failed:', err); }
+              try { await fetch('/api/logout', { method: 'POST', credentials: 'include' }); } catch (err) { console.debug('Logout API failed:', err); }
               Cookies.remove('username');
               window.location.href = '/login';
             }}
-            className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+            className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 mt-4"
           >
             Déconnexion
           </motion.button>
         </motion.div>
 
+        {/* Main chat area */}
         <div className="ml-80 h-full flex flex-col">
+          {/* Room header */}
+          <motion.div
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="p-4 border-b border-white/10 backdrop-blur-sm bg-white/5"
+          >
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-500/80 to-cyan-400/80 flex items-center justify-center">
+                <span className="text-white font-bold text-xl">{currentRoomName.charAt(0).toUpperCase()}</span>
+              </div>
+              <div>
+                <h2 className="text-white font-semibold text-xl">{currentRoomName}</h2>
+                <p className="text-blue-200/70 text-sm">{messageCount} message{messageCount > 1 ? 's' : ''}</p>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Messages area */}
           <div className="flex-1 p-8 overflow-hidden">
             <div
               ref={messagesContainerRef}
@@ -373,7 +494,7 @@ const ChatPage: React.FC = () => {
                         </svg>
                       </motion.div>
                       <h3 className="text-3xl font-bold text-white mb-4">Commencez la conversation</h3>
-                      <p className="text-blue-200/70 text-lg max-w-md mx-auto">Bienvenue dans le salon général. Dites bonjour à la communauté !</p>
+                      <p className="text-blue-200/70 text-lg max-w-md mx-auto">Bienvenue dans le salon {currentRoomName}. Envoyez votre premier message !</p>
                     </div>
                   </motion.div>
                 ) : (
@@ -415,6 +536,7 @@ const ChatPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Message input */}
           <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.6, delay: 0.3 }} className="p-8 border-t border-white/10 backdrop-blur-sm bg-white/5">
             <div className="flex items-center space-x-4 max-w-4xl mx-auto">
               <div className="flex-1 relative">
@@ -453,6 +575,7 @@ const ChatPage: React.FC = () => {
           </motion.div>
         </div>
 
+        {/* Scroll to bottom button */}
         <AnimatePresence>
           {showScrollButton && (
             <motion.div initial={{ opacity: 0, scale: 0.5, y: 100 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.5, y: 100 }} className="fixed bottom-32 right-8 z-50">
@@ -475,6 +598,98 @@ const ChatPage: React.FC = () => {
               <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="absolute right-20 top-1/2 transform -translate-y-1/2 bg-gray-900/90 text-white px-3 py-2 rounded-lg text-sm whitespace-nowrap backdrop-blur-sm border border-white/20">
                 Aller au bas ({scrollPosition.current}%)
                 <div className="absolute right-0 top-1/2 transform translate-x-1 -translate-y-1/2 w-0 h-0 border-l-4 border-l-gray-900/90 border-t-4 border-t-transparent border-b-4 border-b-transparent"></div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Create Room Modal */}
+        <AnimatePresence>
+          {isCreateRoomModalOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+              onClick={() => setIsCreateRoomModalOpen(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+                className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/10"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h2 className="text-2xl font-bold text-white mb-6">Créer un nouveau salon</h2>
+
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="room-name" className="block text-blue-200 mb-2 text-sm font-medium">Nom du salon</label>
+                    <input
+                      id="room-name"
+                      type="text"
+                      value={newRoomName}
+                      onChange={(e) => setNewRoomName(e.target.value)}
+                      placeholder="Ex: Projet Marketing"
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-blue-200/50 focus:outline-none focus:border-blue-400/50 focus:bg-white/15"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="room-description" className="block text-blue-200 mb-2 text-sm font-medium">Description (optionnelle)</label>
+                    <input
+                      id="room-description"
+                      type="text"
+                      value={newRoomDescription}
+                      onChange={(e) => setNewRoomDescription(e.target.value)}
+                      placeholder="Ex: Discussion pour le projet marketing"
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-blue-200/50 focus:outline-none focus:border-blue-400/50 focus:bg-white/15"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="room-members" className="block text-blue-200 mb-2 text-sm font-medium">Emails des membres (séparés par des virgules)</label>
+                    <textarea
+                      id="room-members"
+                      value={newRoomMembers}
+                      onChange={(e) => setNewRoomMembers(e.target.value)}
+                      placeholder="Ex: user1@example.com, user2@example.com"
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-blue-200/50 focus:outline-none focus:border-blue-400/50 focus:bg-white/15 resize-none h-24"
+                    />
+                    <p className="text-xs text-blue-200/60 mt-1">Vous serez automatiquement ajouté au salon.</p>
+                  </div>
+                </div>
+
+                <div className="flex space-x-4 mt-8">
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => setIsCreateRoomModalOpen(false)}
+                    className="flex-1 py-3 px-4 rounded-xl bg-white/10 text-white border border-white/10 hover:bg-white/15 transition-all duration-200"
+                  >
+                    Annuler
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={createRoom}
+                    disabled={!newRoomName.trim() || isCreatingRoom}
+                    className={`flex-1 py-3 px-4 rounded-xl text-white transition-all duration-200 ${!newRoomName.trim() || isCreatingRoom ? 'bg-blue-500/50 cursor-not-allowed' : 'bg-gradient-to-r from-blue-500 to-cyan-400 hover:shadow-lg'}`}
+                  >
+                    {isCreatingRoom ? (
+                      <div className="flex items-center justify-center">
+                        <motion.svg animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </motion.svg>
+                        <span>Création...</span>
+                      </div>
+                    ) : (
+                      "Créer le salon"
+                    )}
+                  </motion.button>
+                </div>
               </motion.div>
             </motion.div>
           )}

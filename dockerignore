@@ -1,0 +1,20 @@
+# Dépendances et build
+node_modules
+dist
+
+# VCS et IDE
+.git
+.gitignore
+.vscode
+.idea
+
+# Logs et caches
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+coverage
+
+# Fichiers locaux
+.env
+.env.*
