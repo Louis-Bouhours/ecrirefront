@@ -1,1 +1,30 @@
 @import "tailwindcss";
+
+/* Dans ton fichier CSS global */
+@layer components {
+    .scrollbar-none::-webkit-scrollbar {
+        display: none;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar {
+        width: 14px;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        margin: 8px 0;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+        background: linear-gradient(145deg, rgba(59, 130, 246, 0.8), rgba(6, 182, 212, 0.8), rgba(139, 92, 246, 0.7));
+        border-radius: 12px;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(145deg, rgba(59, 130, 246, 1), rgba(6, 182, 212, 1), rgba(139, 92, 246, 0.9));
+        transform: scale(1.05);
+    }
+}

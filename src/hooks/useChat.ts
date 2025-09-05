@@ -21,7 +21,7 @@ export const useChat = () => {
       }
 
       // Obtenir un token de chat depuis votre backend
-      const chatToken = await authService.getChatToken(username);
+      const chatToken = await authService.getChatToken();
 
       // Se connecter au chat via Socket.IO
       await chatService.connect(chatToken);
