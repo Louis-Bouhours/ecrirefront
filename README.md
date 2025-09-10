@@ -1,69 +1,76 @@
-# React + TypeScript + Vite
+# Project Name
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**ecrirefront**
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Project Description
 
-## Expanding the ESLint configuration
+`ecrirefront` is the client-side application for a real-time messaging platform, designed to replicate a Discord-like experience. Developed with **React**, this front end provides a dynamic and responsive user interface for chat functionalities. It communicates with a **Go** back end, which handles user authentication, message persistence, and real-time communication.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+---
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Key Features
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+* **Real-time Messaging**: Instantly send and receive messages.
+* **User Authentication**: Secure login and user management.
+* **Persistent Chat History**: Access past conversations.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Technologies Used
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+* **React** (Frontend Framework)
+* **Go** (Backend Language)
+* **Redis** (Used by the backend for real-time data handling)
+* **MongoDB** (Used by the backend for data persistence)
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
+
+### Getting Started
+
+Follow these steps to get the project up and running on your local machine.
+
+1.  **Clone the Repository**:
+    ```bash
+    git clone [https://github.com/Louis-Bouhours/ecrirefront.git](https://github.com/Louis-Bouhours/ecrirefront.git)
+    ```
+
+2.  **Navigate to the Project Directory**:
+    ```bash
+    cd ecrirefront
+    ```
+
+3.  **Install Dependencies**:
+    ```bash
+    npm install
+    ```
+    or
+    ```bash
+    yarn install
+    ```
+
+4.  **Start the Development Server**:
+    ```bash
+    npm start
+    ```
+    or
+    ```bash
+    yarn start
+    ```
+
+The application will now be running on `http://localhost:3000` (or another port if specified).
+
+---
+
+### Live Demo
+
+You can test the live application here:
+
+**[https://ecrire.bouhours-louis.fr](https://ecrire.bouhours-louis.fr)**
+
+---
+
+### License
+
+This project is licensed under the **MIT License**. See the `LICENSE` file for more details.
