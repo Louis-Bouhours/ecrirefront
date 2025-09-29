@@ -84,6 +84,7 @@ jobs:
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT }}
           envs: GH_USER,GH_TOKEN,GH_REPO,APP_PORT
           script: |
