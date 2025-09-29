@@ -21,7 +21,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run Trivy vulnerability scanner (filesystem)
+      - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.33.0
         with:
           scan-type: fs
@@ -35,13 +35,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Compute IMAGE_NAME (lower-case)
-        id: compute
+      - name: Compute image name
+        id: meta
         run: |
           IMAGE_NAME="ghcr.io/$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')"
-          echo "image_name=$IMAGE_NAME" >> "$GITHUB_OUTPUT"
+          echo "IMAGE_NAME=$IMAGE_NAME" >> "$GITHUB_ENV"
 
-      - name: Log in to GitHub Container Registry
+      - name: Log in to Github Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -50,14 +50,12 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build \
-            -t "${{ steps.compute.outputs.image_name }}:latest" \
-            -t "${{ steps.compute.outputs.image_name }}:${{ github.run_number }}" .
+          docker build -t "$IMAGE_NAME:latest" -t "$IMAGE_NAME:${{ github.run_number }}" .
 
       - name: Push Docker image
         run: |
-          docker push "${{ steps.compute.outputs.image_name }}:latest"
-          docker push "${{ steps.compute.outputs.image_name }}:${{ github.run_number }}"
+          docker push "$IMAGE_NAME:latest"
+          docker push "$IMAGE_NAME:${{ github.run_number }}"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -66,7 +64,7 @@ jobs:
           name: "Release v${{ github.run_number }}"
           body: |
             generated github release
-            - Docker image: ${{ steps.compute.outputs.image_name }}:latest
+            - Docker image: ${{ env.IMAGE_NAME }}:latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -78,47 +76,54 @@ jobs:
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
         env:
-          GH_REPO: ${{ github.repository }}
           GH_USER: ${{ github.actor }}
           GH_TOKEN: ${{ secrets.GHCR_PAT }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-          CONTAINER_NAME: ecrirefront
+          GH_REPO: ${{ github.repository }}
+          # Définir le port 2426 pour le front-end
+          APP_PORT: 2426
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT }}
-          envs: GH_REPO,GH_USER,GH_TOKEN,DEPLOY_PORT,CONTAINER_NAME
+          envs: GH_USER,GH_TOKEN,GH_REPO,APP_PORT
           script: |
             set -euo pipefail
 
-            # Connexion à GHCR (nécessaire si image privée)
+            echo "Logging into GitHub Container Registry..."
             if [ -n "${GH_TOKEN:-}" ]; then
               echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_USER" --password-stdin
             fi
 
-            # Nom de l'image en minuscules: ghcr.io/<owner>/<repo>
+            APP_NAME="$(basename "$GH_REPO" | tr '[:upper:]' '[:lower:]')"
             IMAGE_NAME="ghcr.io/$(echo "$GH_REPO" | tr '[:upper:]' '[:lower:]')"
-            PORT="${DEPLOY_PORT:-8085}"
+            # Utilisation du port 2426
+            PORT="${APP_PORT:-2426}"
 
-            echo "Using image: ${IMAGE_NAME}:latest"
-            echo "Exposing container 80 on host 127.0.0.1:${PORT}"
+            echo "Using image: $IMAGE_NAME:latest"
+            echo "App name: $APP_NAME"
+            echo "App port: $PORT"
 
-            docker pull "${IMAGE_NAME}:latest"
+            BASE_DIR="$HOME/apps/$APP_NAME"
+            mkdir -p "$BASE_DIR"/{data,logs}
 
-            docker stop "${CONTAINER_NAME}" || true
-            docker rm "${CONTAINER_NAME}" || true
+            echo "Pulling the latest image..."
+            docker pull "$IMAGE_NAME:latest"
 
+            echo "Stopping and removing the old container if exists..."
+            docker stop "$APP_NAME" || true
+            docker rm "$APP_NAME" || true
+
+            echo "Starting the new container..."
             docker run -d \
-              --name "${CONTAINER_NAME}" \
+              --name "$APP_NAME" \
               --restart unless-stopped \
-              -p 127.0.0.1:${PORT}:80 \
-              "${IMAGE_NAME}:latest"
+              -p 127.0.0.1:"$PORT":80 \
+              -v "$BASE_DIR/data":/data \
+              -v "$BASE_DIR/logs":/var/log/app \
+              "$IMAGE_NAME:latest"
 
-            docker image prune -f || true
+            echo "Container '$APP_NAME' is running on 127.0.0.1:$PORT (for Caddy)."
 
             if [ -n "${GH_TOKEN:-}" ]; then
               docker logout ghcr.io
             fi
-
-            echo "Deploy complete."
